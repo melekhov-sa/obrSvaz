@@ -30,3 +30,17 @@ async def count_by_user(conn: aiosqlite.Connection) -> list[aiosqlite.Row]:
         "SELECT telegram_id, COUNT(*) as cnt FROM complaints GROUP BY telegram_id ORDER BY cnt DESC"
     )
     return await cursor.fetchall()
+
+
+async def count_by_day(conn: aiosqlite.Connection, since_iso: str) -> list[aiosqlite.Row]:
+    cursor = await conn.execute(
+        """
+        SELECT substr(created_at, 1, 10) as day, COUNT(*) as cnt
+        FROM complaints
+        WHERE created_at >= ?
+        GROUP BY day
+        ORDER BY day
+        """,
+        (since_iso,),
+    )
+    return await cursor.fetchall()

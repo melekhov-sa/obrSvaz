@@ -42,3 +42,27 @@ async def test_count_by_user_groups_correctly(conn):
 
     assert counts_by_id[1] == 2
     assert counts_by_id[2] == 1
+
+
+async def test_count_by_day_groups_by_date(conn):
+    await users_repo.upsert_user(conn, 1, "ivan", "Ivan")
+    await complaints_repo.add_complaint(conn, 1, "a")
+    await complaints_repo.add_complaint(conn, 1, "b")
+
+    since = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    rows = await complaints_repo.count_by_day(conn, since)
+
+    assert len(rows) == 1
+    today = datetime.now(timezone.utc).date().isoformat()
+    assert rows[0]["day"] == today
+    assert rows[0]["cnt"] == 2
+
+
+async def test_count_by_day_excludes_old_complaints(conn):
+    await users_repo.upsert_user(conn, 1, "ivan", "Ivan")
+    await complaints_repo.add_complaint(conn, 1, "a")
+
+    future_cutoff = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+    rows = await complaints_repo.count_by_day(conn, future_cutoff)
+
+    assert rows == []
