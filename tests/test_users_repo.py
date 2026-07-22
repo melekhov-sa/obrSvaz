@@ -66,3 +66,32 @@ async def test_get_all_users_returns_everyone(conn):
     all_users = await users_repo.get_all_users(conn)
 
     assert len(all_users) == 2
+
+
+async def test_unlink_by_login_clears_fields_and_returns_row(conn):
+    await users_repo.upsert_user(conn, 1, "ivan", "Ivan")
+    await users_repo.link_user(conn, 1, "ivan_login")
+
+    row = await users_repo.unlink_by_login(conn, "ivan_login")
+
+    assert row["telegram_id"] == 1
+    user = await users_repo.get_user(conn, 1)
+    assert user["marzban_login"] is None
+    assert user["linked_at"] is None
+
+
+async def test_unlink_by_login_returns_none_when_not_found(conn):
+    row = await users_repo.unlink_by_login(conn, "nonexistent_login")
+    assert row is None
+
+
+async def test_unlink_by_login_does_not_affect_other_users(conn):
+    await users_repo.upsert_user(conn, 1, "ivan", "Ivan")
+    await users_repo.upsert_user(conn, 2, "petr", "Petr")
+    await users_repo.link_user(conn, 1, "ivan_login")
+    await users_repo.link_user(conn, 2, "petr_login")
+
+    await users_repo.unlink_by_login(conn, "ivan_login")
+
+    petr = await users_repo.get_user(conn, 2)
+    assert petr["marzban_login"] == "petr_login"

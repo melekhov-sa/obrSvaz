@@ -41,3 +41,16 @@ async def get_all_users(conn: aiosqlite.Connection) -> list[aiosqlite.Row]:
 async def get_linked_users(conn: aiosqlite.Connection) -> list[aiosqlite.Row]:
     cursor = await conn.execute("SELECT * FROM users WHERE marzban_login IS NOT NULL")
     return await cursor.fetchall()
+
+
+async def unlink_by_login(conn: aiosqlite.Connection, marzban_login: str) -> aiosqlite.Row | None:
+    cursor = await conn.execute("SELECT * FROM users WHERE marzban_login = ?", (marzban_login,))
+    row = await cursor.fetchone()
+    if row is None:
+        return None
+    await conn.execute(
+        "UPDATE users SET marzban_login = NULL, linked_at = NULL WHERE marzban_login = ?",
+        (marzban_login,),
+    )
+    await conn.commit()
+    return row
