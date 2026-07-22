@@ -34,8 +34,11 @@ async def main() -> None:
         BotCommand(command="broadcast", description="Разослать сообщение всем"),
         BotCommand(command="stats", description="Статистика"),
     ]
-    await bot.set_my_commands(public_commands, scope=BotCommandScopeDefault())
-    await bot.set_my_commands(admin_commands, scope=BotCommandScopeChat(chat_id=config.admin_id))
+    try:
+        await bot.set_my_commands(public_commands, scope=BotCommandScopeDefault())
+        await bot.set_my_commands(admin_commands, scope=BotCommandScopeChat(chat_id=config.admin_id))
+    except Exception:
+        logger.exception("Failed to register bot command menus; continuing without them")
 
     dp = Dispatcher(storage=MemoryStorage())
     dp.include_router(start.router)
