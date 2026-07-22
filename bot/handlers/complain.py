@@ -1,4 +1,4 @@
-from aiogram import Bot, Router
+from aiogram import Bot, F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -19,7 +19,7 @@ async def handle_complain_start(message: Message, state: FSMContext) -> None:
     await message.answer("Опишите проблему одним сообщением (что не работает, с какого устройства/сервера).")
 
 
-@router.message(ComplainStates.waiting_for_text)
+@router.message(ComplainStates.waiting_for_text, F.text, ~F.text.startswith("/"))
 async def handle_complain_text(message: Message, state: FSMContext, conn, bot: Bot, admin_id: int) -> None:
     complaint_id = await complaints_repo.add_complaint(conn, message.from_user.id, message.text)
     await state.clear()

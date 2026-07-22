@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
 from aiogram import Bot, Router
-from aiogram.exceptions import TelegramForbiddenError
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 
@@ -37,7 +36,7 @@ def create_admin_router(admin_id: int) -> Router:
             try:
                 await bot.send_message(user["telegram_id"], text)
                 delivered += 1
-            except TelegramForbiddenError:
+            except Exception:
                 failed += 1
 
         await message.answer(f"Рассылка завершена. Доставлено: {delivered}, не доставлено: {failed}")
