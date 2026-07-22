@@ -8,7 +8,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot.config import load_config
 from bot.db.database import open_db
-from bot.handlers import admin, complain, faq, start, status
+from bot.handlers import admin, complain, faq, menu, start, status
 from bot.marzban.client import MarzbanClient
 from bot.scheduler.reminders import check_and_send_reminders
 
@@ -24,6 +24,7 @@ async def main() -> None:
     bot = Bot(token=config.bot_token)
 
     public_commands = [
+        BotCommand(command="menu", description="Главное меню"),
         BotCommand(command="complain", description="Сообщить о проблеме с VPN"),
         BotCommand(command="status", description="Статус вашего аккаунта"),
         BotCommand(command="faq", description="Инструкции по подключению"),
@@ -42,6 +43,7 @@ async def main() -> None:
 
     dp = Dispatcher(storage=MemoryStorage())
     dp.include_router(start.router)
+    dp.include_router(menu.router)
     dp.include_router(complain.router)
     dp.include_router(status.router)
     dp.include_router(faq.router)
