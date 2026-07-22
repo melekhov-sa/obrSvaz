@@ -3,6 +3,7 @@ import logging
 
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import BotCommand, BotCommandScopeChat, BotCommandScopeDefault
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from bot.config import load_config
@@ -21,6 +22,21 @@ async def main() -> None:
     marzban = MarzbanClient(config.marzban_url, config.marzban_username, config.marzban_password)
 
     bot = Bot(token=config.bot_token)
+
+    public_commands = [
+        BotCommand(command="complain", description="Сообщить о проблеме с VPN"),
+        BotCommand(command="status", description="Статус вашего аккаунта"),
+        BotCommand(command="faq", description="Инструкции по подключению"),
+    ]
+    admin_commands = public_commands + [
+        BotCommand(command="genlink", description="Сгенерировать ссылку для привязки"),
+        BotCommand(command="unlink", description="Снять привязку пользователя"),
+        BotCommand(command="broadcast", description="Разослать сообщение всем"),
+        BotCommand(command="stats", description="Статистика"),
+    ]
+    await bot.set_my_commands(public_commands, scope=BotCommandScopeDefault())
+    await bot.set_my_commands(admin_commands, scope=BotCommandScopeChat(chat_id=config.admin_id))
+
     dp = Dispatcher(storage=MemoryStorage())
     dp.include_router(start.router)
     dp.include_router(complain.router)

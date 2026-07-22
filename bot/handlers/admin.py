@@ -22,6 +22,18 @@ def create_admin_router(admin_id: int) -> Router:
         bot_username = (await message.bot.get_me()).username
         await message.answer(f"Ссылка для {login}:\nhttps://t.me/{bot_username}?start={token}")
 
+    @router.message(Command("unlink"))
+    async def handle_unlink(message: Message, command: CommandObject, conn) -> None:
+        login = (command.args or "").strip()
+        if not login:
+            await message.answer("Использование: /unlink <логин_в_панели>")
+            return
+        row = await users_repo.unlink_by_login(conn, login)
+        if row is None:
+            await message.answer(f"Активной привязки для логина {login} не найдено.")
+            return
+        await message.answer(f"Отвязано: {login} (был привязан к id {row['telegram_id']})")
+
     @router.message(Command("broadcast"))
     async def handle_broadcast(message: Message, command: CommandObject, conn, bot: Bot) -> None:
         text = command.args
@@ -43,12 +55,22 @@ def create_admin_router(admin_id: int) -> Router:
 
     @router.message(Command("stats"))
     async def handle_stats(message: Message, conn) -> None:
+        all_users = await users_repo.get_all_users(conn)
+        linked_users = await users_repo.get_linked_users(conn)
         total = await complaints_repo.count_all(conn)
         week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
         last_week = await complaints_repo.count_since(conn, week_ago)
         by_user = await complaints_repo.count_by_user(conn)
 
-        lines = [f"Всего жалоб: {total}", f"За последние 7 дней: {last_week}", "", "По пользователям:"]
+        lines = [
+            f"Зарегистрировано в боте: {len(all_users)}",
+            f"Привязано к панели: {len(linked_users)}",
+            "",
+            f"Всего жалоб: {total}",
+            f"За последние 7 дней: {last_week}",
+            "",
+            "По пользователям:",
+        ]
         for row in by_user:
             lines.append(f"  {row['telegram_id']}: {row['cnt']}")
 
