@@ -1,23 +1,28 @@
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup
 
 from bot.handlers import admin, complain, faq, status
 from bot.marzban.client import MarzbanClient
 
 router = Router(name="menu")
 
+BUTTON_COMPLAIN = "🔴 Сообщить о проблеме"
+BUTTON_STATUS = "📊 Мой статус"
+BUTTON_FAQ = "📖 FAQ"
+BUTTON_STATS = "📈 Статистика"
 
-def main_menu_keyboard(is_admin: bool) -> InlineKeyboardMarkup:
+
+def main_menu_keyboard(is_admin: bool) -> ReplyKeyboardMarkup:
     buttons = [
-        [InlineKeyboardButton(text="🔴 Сообщить о проблеме", callback_data="menu:complain")],
-        [InlineKeyboardButton(text="📊 Мой статус", callback_data="menu:status")],
-        [InlineKeyboardButton(text="📖 FAQ", callback_data="menu:faq")],
+        [KeyboardButton(text=BUTTON_COMPLAIN)],
+        [KeyboardButton(text=BUTTON_STATUS)],
+        [KeyboardButton(text=BUTTON_FAQ)],
     ]
     if is_admin:
-        buttons.append([InlineKeyboardButton(text="📈 Статистика", callback_data="menu:stats")])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+        buttons.append([KeyboardButton(text=BUTTON_STATS)])
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
 
 @router.message(Command("menu"))
@@ -26,31 +31,29 @@ async def handle_menu_command(message: Message, admin_id: int) -> None:
     await message.answer("Главное меню:", reply_markup=main_menu_keyboard(is_admin))
 
 
-@router.callback_query(F.data == "menu:complain")
-async def handle_menu_complain(callback: CallbackQuery, state: FSMContext) -> None:
+@router.message(F.text == BUTTON_COMPLAIN)
+async def handle_menu_complain(message: Message, state: FSMContext) -> None:
     await complain.start_complaint_flow(state)
-    await callback.message.answer(complain.COMPLAIN_PROMPT)
-    await callback.answer()
+    await message.answer(complain.COMPLAIN_PROMPT)
 
 
-@router.callback_query(F.data == "menu:status")
-async def handle_menu_status(callback: CallbackQuery, conn, marzban: MarzbanClient) -> None:
-    text = await status.build_status_text(conn, marzban, callback.from_user.id)
-    await callback.message.answer(text)
-    await callback.answer()
+@router.message(F.text == BUTTON_STATUS)
+async def handle_menu_status(message: Message, state: FSMContext, conn, marzban: MarzbanClient) -> None:
+    await state.clear()
+    text = await status.build_status_text(conn, marzban, message.from_user.id)
+    await message.answer(text)
 
 
-@router.callback_query(F.data == "menu:faq")
-async def handle_menu_faq(callback: CallbackQuery) -> None:
-    await callback.message.answer(faq.FAQ_COMMON, reply_markup=faq.faq_keyboard())
-    await callback.answer()
+@router.message(F.text == BUTTON_FAQ)
+async def handle_menu_faq(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await message.answer(faq.FAQ_COMMON, reply_markup=faq.faq_keyboard())
 
 
-@router.callback_query(F.data == "menu:stats")
-async def handle_menu_stats(callback: CallbackQuery, conn, admin_id: int) -> None:
-    if callback.from_user.id != admin_id:
-        await callback.answer()
+@router.message(F.text == BUTTON_STATS)
+async def handle_menu_stats(message: Message, state: FSMContext, conn, admin_id: int) -> None:
+    if message.from_user.id != admin_id:
         return
+    await state.clear()
     text = await admin.build_stats_text(conn)
-    await callback.message.answer(text)
-    await callback.answer()
+    await message.answer(text)
